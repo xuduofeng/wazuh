@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (C) 2015-2020, Wazuh Inc.
+# Copyright (C) 2015-2021, Wazuh Inc.
 # OSSEC         Controls Wazuh on Redhat-based systems
 # Author:       Kayvan A. Sylvan <kayvan@sylvan.com>
 # Author:       Daniel B. Cid <dcid@ossec.net>
@@ -14,15 +14,14 @@
 export LANG=C
 
 . /etc/init.d/functions
-. /etc/ossec-init.conf
 
-if [ "X${DIRECTORY}" = "X" ]; then
-    DIRECTORY="/var/ossec"
+if [ "X${WAZUH_HOME}" = "X" ]; then
+    WAZUH_HOME="/var/ossec"
 fi
 
 start() {
     echo -n "Starting Wazuh: "
-    ${DIRECTORY}/bin/wazuh-control start > /dev/null
+    ${WAZUH_HOME}/bin/wazuh-control start > /dev/null
     RETVAL=$?
     if [ $RETVAL -eq 0 ]; then
         success
@@ -35,7 +34,7 @@ start() {
 
 stop() {
     echo -n "Stopping Wazuh: "
-    ${DIRECTORY}/bin/wazuh-control stop > /dev/null
+    ${WAZUH_HOME}/bin/wazuh-control stop > /dev/null
     RETVAL=$?
     if [ $RETVAL -eq 0 ]; then
         success
@@ -47,7 +46,7 @@ stop() {
 }
 
 status() {
-    ${DIRECTORY}/bin/wazuh-control status
+    ${WAZUH_HOME}/bin/wazuh-control status
     RETVAL=$?
     return $RETVAL
 }

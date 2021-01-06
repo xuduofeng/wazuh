@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright (C) 2015-2020, Wazuh Inc.
+# Copyright (C) 2015-2021, Wazuh Inc.
 # Installation script for Wazuh
 # Author: Daniel B. Cid <daniel.cid@gmail.com>
 
@@ -138,14 +138,14 @@ Install()
 
     cd ../
 
-    # Generate the /etc/ossec-init.conf
+    # Generate the wazuh-init.conf
+    WAZUH_INIT=${INSTALLDIR}/etc/wazuh-init.conf
     VERSION=`cat ${VERSION_FILE}`
     REVISION=`cat ${REVISION_FILE}`
-    chmod 700 ${OSSEC_INIT} > /dev/null 2>&1
-    GenerateInitConf > ${OSSEC_INIT}
-    chmod 640 ${OSSEC_INIT}
-    chown root:ossec ${OSSEC_INIT}
-    ln -sf ${OSSEC_INIT} ${INSTALLDIR}${OSSEC_INIT}
+    chmod 700 ${WAZUH_INIT} > /dev/null 2>&1
+    GenerateInitConf > ${WAZUH_INIT}
+    chmod 640 ${WAZUH_INIT}
+    chown root:ossec ${WAZUH_INIT}
 
     # Install Wazuh ruleset updater
     if [ "X$INSTYPE" = "Xserver" ]; then
@@ -1002,7 +1002,7 @@ main()
         fi
     fi
 
-    # Installing (calls the respective script
+    # Installing (calls the respective script)
     # -- InstallAgent.sh or InstallServer.sh
     Install
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (C) 2015-2020, Wazuh Inc.
+# Copyright (C) 2015-2021, Wazuh Inc.
 # Shared variables and functions
 # Author: Daniel B. Cid <daniel.cid@gmail.com>
 
@@ -23,7 +23,6 @@ else
     fi
 fi
 
-OSSEC_INIT="/etc/ossec-init.conf"
 HOST=`hostname`
 NAMESERVERS=`cat /etc/resolv.conf | grep "^nameserver" | cut -d " " -sf 2`
 NAMESERVERS2=`cat /etc/resolv.conf | grep "^nameserver" | cut -sf 2`

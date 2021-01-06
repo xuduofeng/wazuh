@@ -22,7 +22,6 @@ fi
 
 AUTHOR="Wazuh Inc."
 USE_JSON=false
-INITCONF="/etc/ossec-init.conf"
 DAEMONS="wazuh-clusterd wazuh-modulesd wazuh-monitord wazuh-logcollector wazuh-remoted wazuh-syscheckd wazuh-analysisd wazuh-maild wazuh-execd wazuh-db wazuh-authd wazuh-agentlessd wazuh-integratord wazuh-dbd wazuh-csyslogd wazuh-apid"
 OP_DAEMONS="wazuh-clusterd wazuh-maild wazuh-agentlessd wazuh-integratord wazuh-dbd wazuh-csyslogd"
 
@@ -30,7 +29,13 @@ OP_DAEMONS="wazuh-clusterd wazuh-maild wazuh-agentlessd wazuh-integratord wazuh-
 SDAEMONS=$(echo $DAEMONS | awk '{ for (i=NF; i>1; i--) printf("%s ",$i); print $1; }')
 OP_SDAEMONS=$(echo $OP_DAEMONS | awk '{ for (i=NF; i>1; i--) printf("%s ",$i); print $1; }')
 
-[ -f ${INITCONF} ] && . ${INITCONF}  || echo "ERROR: No such file ${INITCONF}"
+if [ "X${WAZUH_HOME}" = "X" ]; then
+    echo "ERROR: WAZUH_HOME not found"
+
+else
+    INITCONF="${WAZUH_HOME}/etc/wazuh-init.conf"
+    [ -f ${INITCONF} ] && . ${INITCONF}  || echo "ERROR: No such file ${INITCONF}"
+fi
 
 ## Locking for the start/stop
 LOCK="${DIR}/var/start-script-lock"

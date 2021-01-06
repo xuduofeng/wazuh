@@ -22,12 +22,17 @@ fi
 
 AUTHOR="Wazuh Inc."
 DAEMONS="wazuh-modulesd wazuh-monitord wazuh-logcollector wazuh-syscheckd wazuh-analysisd wazuh-maild wazuh-execd wazuh-db wazuh-agentlessd wazuh-integratord wazuh-dbd wazuh-csyslogd"
-INITCONF="/etc/ossec-init.conf"
 
 # Reverse order of daemons
 SDAEMONS=$(echo $DAEMONS | awk '{ for (i=NF; i>1; i--) printf("%s ",$i); print $1; }')
 
-[ -f ${INITCONF} ] && . ${INITCONF}  || echo "ERROR: No such file ${INITCONF}"
+if [ "X${WAZUH_HOME}" = "X" ]; then
+    echo "ERROR: WAZUH_HOME not found"
+
+else
+    INITCONF="${WAZUH_HOME}/etc/wazuh-init.conf"
+    [ -f ${INITCONF} ] && . ${INITCONF}  || echo "ERROR: No such file ${INITCONF}"
+fi
 
 ## Locking for the start/stop
 LOCK="${DIR}/var/start-script-lock"

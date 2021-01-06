@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (C) 2015-2020, Wazuh Inc.
+# Copyright (C) 2015-2021, Wazuh Inc.
 # wazuh-control        This shell script takes care of starting
 #                      or stopping ossec-hids
 # Author: Daniel B. Cid <daniel.cid@gmail.com>
@@ -17,9 +17,13 @@ DAEMONS="wazuh-modulesd wazuh-logcollector wazuh-syscheckd wazuh-agentd wazuh-ex
 # Reverse order of daemons
 SDAEMONS=$(echo $DAEMONS | awk '{ for (i=NF; i>1; i--) printf("%s ",$i); print $1; }')
 
-INITCONF="/etc/ossec-init.conf"
+if [ "X${WAZUH_HOME}" = "X" ]; then
+    echo "ERROR: WAZUH_HOME not found"
 
-[ -f ${INITCONF} ] && . ${INITCONF}  || echo "ERROR: No such file ${INITCONF}"
+else
+    INITCONF="${WAZUH_HOME}/etc/wazuh-init.conf"
+    [ -f ${INITCONF} ] && . ${INITCONF}  || echo "ERROR: No such file ${INITCONF}"
+fi
 
 ## Locking for the start/stop
 LOCK="${DIR}/var/start-script-lock"
