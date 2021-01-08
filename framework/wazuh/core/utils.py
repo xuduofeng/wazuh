@@ -8,6 +8,7 @@ import hashlib
 import json
 import operator
 import re
+import regex
 import shutil
 import stat
 import sys
@@ -911,7 +912,7 @@ class WazuhDBBackend(AbstractDatabaseBackend):
                 value = f"'{v}'"
             else:
                 raise TypeError(f'Invalid type for request parameters: {type(v)}')
-            query = re.sub(r':\b' + re.escape(str(k)) + r'\b', value, query)
+            query = regex.sub(r':\b' + regex.escape(str(k)) + r'\b', value, query)
         return query
 
     def _render_query(self, query):
