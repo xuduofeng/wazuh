@@ -7,6 +7,7 @@ import concurrent.futures
 import copy
 import logging
 import os
+from functools import lru_cache
 from secrets import token_urlsafe
 from shutil import chown
 from time import time
@@ -83,6 +84,7 @@ JWT_ALGORITHM = 'HS256'
 _secret_file_path = os.path.join(SECURITY_PATH, 'jwt_secret')
 
 
+@lru_cache(maxsize=None)
 def generate_secret():
     """Generate secret file to keep safe or load existing secret."""
     try:
@@ -91,9 +93,9 @@ def generate_secret():
             with open(_secret_file_path, mode='x') as secret_file:
                 secret_file.write(jwt_secret)
             try:
-                chown(_secret_file_path, 'ossec', 'ossec')
+                chown(_secret_file_path, 'root', 'root')
             except PermissionError:
-                pass
+                raise WazuhInternalError(6003)
             os.chmod(_secret_file_path, 0o640)
         else:
             with open(_secret_file_path, mode='r') as secret_file:

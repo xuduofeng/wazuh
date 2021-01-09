@@ -40,6 +40,7 @@ def start(foreground, root, config_file):
     # noinspection PyUnresolvedReferences
     from api import validator
     from api.api_exception import APIError
+    from api.authentication import generate_secret
     from api.constants import CONFIG_FILE_PATH
     from api.middlewares import set_user_name, security_middleware, response_postprocessing
     from api.uri_parser import APIUriParser
@@ -91,6 +92,9 @@ def start(foreground, root, config_file):
                 print('Wazuh API SSL ERROR. Please, ensure if path to certificates is correct in the configuration '
                       f'file WAZUH_PATH/{to_relative_path(CONFIG_FILE_PATH)}')
             sys.exit(1)
+
+    # Load or generate secret as root before dropping privileges
+    generate_secret()
 
     # Drop privileges to ossec
     if not root:
