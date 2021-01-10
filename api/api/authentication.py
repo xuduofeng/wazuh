@@ -92,16 +92,15 @@ def generate_secret():
             jwt_secret = token_urlsafe(512)
             with open(_secret_file_path, mode='x') as secret_file:
                 secret_file.write(jwt_secret)
-            try:
-                chown(_secret_file_path, 'root', 'root')
-            except PermissionError:
-                raise WazuhInternalError(6003)
             os.chmod(_secret_file_path, 0o640)
         else:
             with open(_secret_file_path, mode='r') as secret_file:
                 jwt_secret = secret_file.readline()
-    except IOError:
+    except Exception:
         raise WazuhInternalError(6003)
+    finally:
+        # Change secret ownership to root if it is not already done
+        os.stat(_secret_file_path).st_uid != 0 and chown(_secret_file_path, 'root', 'root')
 
     return jwt_secret
 
