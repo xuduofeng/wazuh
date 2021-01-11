@@ -8,6 +8,7 @@ from functools import lru_cache
 
 import api.configuration as configuration
 from wazuh.core import common
+from wazuh.core.cluster.utils import read_cluster_config
 from wazuh.core.exception import WazuhError
 from wazuh.core.results import AffectedItemsWazuhResult, WazuhResult
 from wazuh.core.security import invalid_users_tokens, invalid_roles_tokens, invalid_run_as_tokens, revoke_tokens
@@ -18,8 +19,10 @@ from wazuh.rbac.orm import AuthenticationManager, PoliciesManager, RolesManager,
     TokenManager, UserRolesManager, RolesRulesManager, RulesManager
 from wazuh.rbac.orm import SecurityError
 
+
 # Minimum eight characters, at least one uppercase letter, one lowercase letter, one number and one special character:
 _user_password = re.compile(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$')
+cluster_enabled = not read_cluster_config()['disabled']
 
 
 def get_user_me(token):
@@ -900,7 +903,9 @@ def wrapper_revoke_tokens():
     """ Revoke all tokens """
     revoke_tokens()
 
-    return WazuhResult({'message': 'Tokens were successfully revoked'})
+    return WazuhResult({'message': 'Revoke command sent. Please restart the Wazuh service'
+                                   f"{' on the master node ' if cluster_enabled else ' '}for the "
+                                   'changes to take effect'})
 
 
 @lru_cache(maxsize=None)

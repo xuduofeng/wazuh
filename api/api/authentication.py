@@ -82,18 +82,25 @@ def check_user(user, password, required_scopes=None):
 JWT_ISSUER = 'wazuh'
 JWT_ALGORITHM = 'HS256'
 _secret_file_path = os.path.join(SECURITY_PATH, 'jwt_secret')
+_revoke_file_path = os.path.join(SECURITY_PATH, '.revoke')
 
 
 @lru_cache(maxsize=None)
 def generate_secret():
     """Generate secret file to keep safe or load existing secret."""
+    def _create_jwt_secret():
+        jwt_secret = token_urlsafe(512)
+        with open(_secret_file_path, mode='x') as secret_file:
+            secret_file.write(jwt_secret)
+        os.chmod(_secret_file_path, 0o640)
+
     try:
         if not os.path.exists(_secret_file_path):
-            jwt_secret = token_urlsafe(512)
-            with open(_secret_file_path, mode='x') as secret_file:
-                secret_file.write(jwt_secret)
-            os.chmod(_secret_file_path, 0o640)
+            _create_jwt_secret()
         else:
+            if os.path.exists(_revoke_file_path):
+                os.remove(_secret_file_path)
+                _create_jwt_secret()
             with open(_secret_file_path, mode='r') as secret_file:
                 jwt_secret = secret_file.readline()
     except Exception:
@@ -101,15 +108,17 @@ def generate_secret():
     finally:
         # Change secret ownership to root if it is not already done
         os.stat(_secret_file_path).st_uid != 0 and chown(_secret_file_path, 'root', 'root')
+        os.path.exists(_revoke_file_path) and os.remove(_revoke_file_path)
 
     return jwt_secret
 
 
 def change_secret():
     """Generate new JWT secret."""
-    new_secret = token_urlsafe(512)
-    with open(_secret_file_path, mode='w') as jwt_secret:
-        jwt_secret.write(new_secret)
+    with open(_revoke_file_path, mode='w'):
+        pass
+    os.chmod(_revoke_file_path, 0o660)
+    chown(_revoke_file_path, 'ossec', 'ossec')
 
 
 def get_security_conf():
