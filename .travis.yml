@@ -12,10 +12,10 @@ env:
 - USER_ENABLE_OPENSCAP="y"
 - USER_ENABLE_SYSCOLLECTOR="y"
 - USER_ENABLE_SCA="y"
-- USER_UPDATE="n"
+- USER_UPDATE="na"
 - USER_SERVER_IP="1.2.3.4"
 - USER_CREATE_SSL_CERT="y"
-- USER_CA_STORE="/path/to/my_cert.pem" 
+- USER_CA_STORE="/path/to/my_cert.pem"
 
 before_script:
 - sudo apt-get update -qq
