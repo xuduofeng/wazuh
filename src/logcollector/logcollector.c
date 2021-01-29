@@ -97,6 +97,7 @@ int reload_interval;
 int reload_delay;
 int free_excluded_files_interval;
 int state_interval;
+int check_host_interval;
 OSHash * msg_queues_table;
 
 ///< To asociate the path, the position to read, and the hash key of lines read.
@@ -839,9 +840,6 @@ void LogCollectorStart()
             f_check = 0;
         }
 
-        if (mq_log_builder_update() == -1) {
-            mdebug1("Output log pattern data could not be updated.");
-        }
 
         sleep(1);
 

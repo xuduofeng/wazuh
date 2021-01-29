@@ -17,6 +17,18 @@ int sock_fail_time;
 
 #ifndef WIN32
 
+static char *mq_log_builder_build(log_builder_t * builder, const char * pattern, const char * logmsg, const char * location) {
+    static time_t last_update = 0;
+    time_t current = time(NULL);
+    extern int check_host_interval;
+
+    if (last_update + check_host_interval < current) {
+        log_builder_update(builder);
+        last_update = current;
+    }
+    return log_builder_build(builder, pattern, logmsg, location);
+}
+
 /* Start the Message Queue. type: WRITE||READ */
 int StartMQ(const char *path, short int type, short int n_attempts)
 {
@@ -115,7 +127,7 @@ int SendMSGtoSCK(int queue, const char *message, const char *locmsg, __attribute
     char * _message = NULL;
     int retval = 0;
 
-    _message = log_builder_build(mq_log_builder, target->format, message, locmsg);
+    _message = mq_log_builder_build(mq_log_builder, target->format, message, locmsg);
 
     tmpstr[OS_MAXSTR] = '\0';
 
@@ -211,7 +223,7 @@ int SendMSGtoSCK(int queue, const char *message, const char *locmsg, char loc, l
         return -1;
     }
 
-    _message = log_builder_build(mq_log_builder, targets[0].format, message, locmsg);
+    _message = mq_log_builder_build(mq_log_builder, targets[0].format, message, locmsg);
     retval = SendMSG(queue, _message, locmsg, loc);
     free(_message);
     return retval;
