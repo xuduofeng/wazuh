@@ -6,6 +6,7 @@ import datetime
 import logging
 
 from aiohttp import web
+from connexion.lifecycle import ConnexionResponse
 
 import wazuh.manager as manager
 import wazuh.stats as stats
@@ -14,6 +15,7 @@ from api.models.base_model_ import Body
 from api.util import remove_nones_to_dict, parse_api_param, raise_if_exc, deserialize_date
 from wazuh.core import common
 from wazuh.core.cluster.dapi.dapi import DistributedAPI
+from wazuh.core.results import AffectedItemsWazuhResult
 
 logger = logging.getLogger('wazuh-api')
 
@@ -60,16 +62,23 @@ async def get_info(request, pretty=False, wait_for_complete=False):
     return web.json_response(data=data, status=200, dumps=prettify if pretty else dumps)
 
 
-async def get_configuration(request, pretty=False, wait_for_complete=False, section=None, field=None):
+async def get_configuration(request, pretty=False, wait_for_complete=False, section=None, field=None, raw: bool = False):
     """Get manager's or local_node's configuration (ossec.conf)
 
-    :param pretty: Show results in human-readable format
-    :param wait_for_complete: Disable timeout response
-    :param section: Indicates the wazuh configuration section
-    :param field: Indicates a section child, e.g, fields for rule section are include, decoder_dir, etc.
+    Parameters
+    ----------
+    pretty : bool, optional
+        Show results in human-readable format. It only works when `raw` is False (JSON format). Default `True`
+    wait_for_complete : bool, optional
+        Disable response timeout or not. Default `False`
+    section : str
+        Indicates the wazuh configuration section
+    field : str
+        Indicates a section child, e.g, fields for rule section are include, decoder_dir, etc.
+    raw : bool, optional
+        Whether to return the file content in raw or JSON format. Default `True`
     """
-    f_kwargs = {'section': section,
-                'field': field}
+    f_kwargs = {'section': section, 'field': field, 'raw': raw}
 
     dapi = DistributedAPI(f=manager.read_ossec_conf,
                           f_kwargs=remove_nones_to_dict(f_kwargs),
@@ -81,7 +90,10 @@ async def get_configuration(request, pretty=False, wait_for_complete=False, sect
                           )
     data = raise_if_exc(await dapi.distribute_function())
 
-    return web.json_response(data=data, status=200, dumps=prettify if pretty else dumps)
+    if raw:
+        return ConnexionResponse(body=data["message"], mimetype='application/xml')
+    else:
+        return web.json_response(data=data, status=200, dumps=prettify if pretty else dumps)
 
 
 async def get_stats(request, pretty=False, wait_for_complete=False, date=None):
@@ -412,6 +424,35 @@ async def get_manager_config_ondemand(request, component, pretty=False, wait_for
                 }
 
     dapi = DistributedAPI(f=manager.get_config,
+                          f_kwargs=remove_nones_to_dict(f_kwargs),
+                          request_type='local_any',
+                          is_async=False,
+                          wait_for_complete=wait_for_complete,
+                          logger=logger,
+                          rbac_permissions=request['token_info']['rbac_policies']
+                          )
+    data = raise_if_exc(await dapi.distribute_function())
+
+    return web.json_response(data=data, status=200, dumps=prettify if pretty else dumps)
+
+
+async def update_configuration(request, body, pretty=False, wait_for_complete=False):
+    """Update manager's or local_node's configuration (ossec.conf)
+
+    Parameters
+    ----------
+    pretty : bool, optional
+        Show results in human-readable format. It only works when `raw` is False (JSON format). Default `True`
+    wait_for_complete : bool, optional
+        Disable response timeout or not. Default `False`
+    """
+    # Parse body to utf-8
+    Body.validate_content_type(request, expected_content_type='application/octet-stream')
+    parsed_body = Body.decode_body(body, unicode_error=1911, attribute_error=1912)
+
+    f_kwargs = {'new_conf': parsed_body}
+
+    dapi = DistributedAPI(f=manager.update_ossec_conf,
                           f_kwargs=remove_nones_to_dict(f_kwargs),
                           request_type='local_any',
                           is_async=False,

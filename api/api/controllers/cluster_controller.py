@@ -6,6 +6,7 @@ import datetime
 import logging
 
 from aiohttp import web
+from connexion.lifecycle import ConnexionResponse
 
 import wazuh.cluster as cluster
 import wazuh.core.common as common
@@ -210,7 +211,8 @@ async def get_info_node(request, node_id, pretty=False, wait_for_complete=False)
     return web.json_response(data=data, status=200, dumps=prettify if pretty else dumps)
 
 
-async def get_configuration_node(request, node_id, pretty=False, wait_for_complete=False, section=None, field=None):
+async def get_configuration_node(request, node_id, pretty=False, wait_for_complete=False, section=None, field=None,
+                                 raw: bool = False):
     """Get a specified node's configuration (ossec.conf)
 
     :param node_id: Cluster node name.
@@ -221,7 +223,8 @@ async def get_configuration_node(request, node_id, pretty=False, wait_for_comple
     """
     f_kwargs = {'node_id': node_id,
                 'section': section,
-                'field': field}
+                'field': field,
+                'raw': raw}
 
     nodes = raise_if_exc(await get_system_nodes())
     dapi = DistributedAPI(f=manager.read_ossec_conf,
@@ -235,7 +238,10 @@ async def get_configuration_node(request, node_id, pretty=False, wait_for_comple
                           )
     data = raise_if_exc(await dapi.distribute_function())
 
-    return web.json_response(data=data, status=200, dumps=prettify if pretty else dumps)
+    if raw:
+        return ConnexionResponse(body=data["message"], mimetype='application/xml')
+    else:
+        return web.json_response(data=data, status=200, dumps=prettify if pretty else dumps)
 
 
 async def get_stats_node(request, node_id, pretty=False, wait_for_complete=False, date=None):
