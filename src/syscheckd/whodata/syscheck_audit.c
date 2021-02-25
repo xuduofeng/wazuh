@@ -20,8 +20,10 @@
 #include "string_op.h"
 
 #define AUDIT_CONF_FILE DEFAULTDIR "/etc/af_wazuh.conf"
+#define AUDIT_RULES_FILE DEFAULTDIR "/etc/audit_rules_wazuh.conf"
 #define PLUGINS_DIR_AUDIT_2 "/etc/audisp/plugins.d"
 #define PLUGINS_DIR_AUDIT_3 "/etc/audit/plugins.d"
+#define AUDIT_RULES_LINK "/etc/audit/rules.d/audit_rules_wazuh.conf"
 #define AUDIT_CONF_LINK "af_wazuh.conf"
 #define AUDIT_SOCKET DEFAULTDIR "/queue/sockets/audit"
 #define BUF_SIZE OS_MAXSTR
@@ -275,22 +277,62 @@ int add_audit_rules_syscheck(bool first_time) {
 }
 
 
-void audit_no_rules_to_realtime() {
-    int found;
+void audit_immutable_init() {
     int i;
+    FILE *fp;
+
+    fp = fopen(AUDIT_RULES_FILE, "w");
+    if (!fp) {
+        merror(FOPEN_ERROR, AUDIT_RULES_FILE, errno, strerror(errno));
+        return;
+    }
 
     for (i = 0; syscheck.dir[i] != NULL; i++) {
         if ((syscheck.opts[i] & WHODATA_ACTIVE) == 0) {
             continue;
         }
+        mdebug2(FIM_ADDED_RULE_TO_FILE, fim_get_real_path(i));
+        fprintf(fp, "-w %s -p wa -k %s\n", fim_get_real_path(i), AUDIT_KEY);
 
-        found = search_audit_rule(fim_get_real_path(i), "wa", AUDIT_KEY);
+        audit_no_rules_to_realtime(i);
+    }
 
-        if (found == 0) {   // No rule found
-            mwarn(FIM_ERROR_WHODATA_ADD_DIRECTORY, fim_get_real_path(i));
-            syscheck.opts[i] &= ~WHODATA_ACTIVE;
-            syscheck.opts[i] |= REALTIME_ACTIVE;
+    if (fclose(fp)) {
+        merror(FCLOSE_ERROR, AUDIT_RULES_FILE, errno, strerror(errno));
+        return;
+    }
+
+    // Create symlink to audit rules file
+    if (symlink(AUDIT_RULES_FILE, AUDIT_RULES_LINK) < 0) {
+        switch (errno) {
+        case EEXIST:
+            if (unlink(AUDIT_RULES_LINK) < 0) {
+                merror(UNLINK_ERROR, AUDIT_RULES_LINK, errno, strerror(errno));
+                return;
+            }
+
+            if (symlink(AUDIT_RULES_FILE, AUDIT_RULES_LINK) == 0) {
+                break;
+            }
+
+        // Fallthrough
+        default:
+            merror(LINK_ERROR, AUDIT_RULES_LINK, AUDIT_RULES_FILE, errno, strerror(errno));
+            return;
         }
+    }
+}
+
+
+void audit_no_rules_to_realtime(int pos) {
+    int found;
+
+    found = search_audit_rule(fim_get_real_path(pos), "wa", AUDIT_KEY);
+
+    if (found == 0) {   // No rule found
+        mwarn(FIM_ERROR_WHODATA_ADD_DIRECTORY, fim_get_real_path(pos));
+        syscheck.opts[pos] &= ~WHODATA_ACTIVE;
+        syscheck.opts[pos] |= REALTIME_ACTIVE;
     }
 }
 
@@ -509,7 +551,7 @@ int audit_init(void) {
 
     switch (au_mode) {
     case AUDIT_IMMUTABLE:
-        audit_no_rules_to_realtime();
+        audit_immutable_init();
         break;
     case AUDIT_ERROR:
         merror(FIM_ERROR_AUDIT_MODE, strerror(errno), errno);
