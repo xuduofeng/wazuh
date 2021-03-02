@@ -1,19 +1,35 @@
 # Copyright (C) 2015-2019, Wazuh Inc.
 # Created by Wazuh, Inc. <info@wazuh.com>.
 # This program is a free software; you can redistribute it and/or modify it under the terms of GPLv2
-from wazuh.core.wlogging import WazuhLogger
 import logging
 import re
+
 from aiohttp.abc import AbstractAccessLogger
+from werkzeug.exceptions import Unauthorized
+
+from api.authentication import decode_token
+from wazuh.core.wlogging import WazuhLogger
 
 # compile regex when the module is imported so it's not necessary to compile it everytime log.info is called
 request_pattern = re.compile(r'\[.+\]|\s+\*\s+')
 
+# Variable used to specify an unknown user
+UNKNOWN_USER_STRING = "unknown_user"
 
 class AccessLogger(AbstractAccessLogger):
 
     def log(self, request, response, time):
-        self.logger.info(f'{request.get("user", "unknown_user")} '
+        # With permanent redirect or not found responses, we have no token information,
+        # decode the JWT Token to get the username
+        if response.status == 308 or response.status == 404:
+            try:
+                user = decode_token(request.headers["authorization"][7:])["sub"]
+            except Unauthorized:
+                user = UNKNOWN_USER_STRING
+        else:
+            user = request.get("user", UNKNOWN_USER_STRING)
+
+        self.logger.info(f'{user} '
                          f'{request.remote} '
                          f'"{request.method} {request.path}" '
                          f'done in {time:.3f}s: {response.status}')

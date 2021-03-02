@@ -5,22 +5,35 @@
 
 import logging
 import os
+import sys
 from unittest.mock import patch, MagicMock, call
 
 import pytest
+from aiohttp.web_response import StreamResponse
 
 with patch('wazuh.core.common.ossec_uid'):
     with patch('wazuh.core.common.ossec_gid'):
+        sys.modules['api.authentication'] = MagicMock()
         from api import alogging
 
+        del sys.modules['api.authentication']
 
-@patch('api.alogging.logging.Logger')
-def test_accesslogger_log(mock_logger_info):
-    """Tests expected methods are called when using log()"""
+
+@pytest.mark.parametrize('response, status', [
+    (StreamResponse(), 200),  # default status = 200
+    (StreamResponse(status=308), 308),
+    (StreamResponse(status=404), 404)
+])
+@patch('api.alogging.decode_token')
+def test_accesslogger_log(mock_decode_token, response, status):
+    """Test expected methods are called when using log()"""
     request = MagicMock()
-    alogging.AccessLogger.log(MagicMock(), request=request, response=MagicMock(), time=0.0)
+    alogging.AccessLogger.log(MagicMock(), request=request, response=response, time=0.0)
 
-    assert request.method_calls[0] == call.get('user', 'unknown_user')
+    if status == 200:
+        assert request.method_calls[0] == call.get('user', 'unknown_user')
+    else:
+        mock_decode_token.assert_called_once()
 
 
 @patch('wazuh.core.wlogging.WazuhLogger.__init__')
