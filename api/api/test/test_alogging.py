@@ -19,18 +19,24 @@ with patch('wazuh.core.common.ossec_uid'):
         del sys.modules['api.authentication']
 
 
-@pytest.mark.parametrize('response, status', [
-    (StreamResponse(), 200),  # default status = 200
-    (StreamResponse(status=308), 308),
-    (StreamResponse(status=404), 404)
+@pytest.mark.parametrize('response', [
+    StreamResponse(),  # default status = 200
+    StreamResponse(status=308),
+    StreamResponse(status=404)
 ])
 @patch('api.alogging.decode_token')
-def test_accesslogger_log(mock_decode_token, response, status):
-    """Test expected methods are called when using log()"""
+def test_accesslogger_log(mock_decode_token, response):
+    """Test expected methods are called when using log().
+
+    Parameters
+    ----------
+    response : StreamResponse
+        Response used to log a mocked request.
+    """
     request = MagicMock()
     alogging.AccessLogger.log(MagicMock(), request=request, response=response, time=0.0)
 
-    if status == 200:
+    if response.status == 200:
         assert request.method_calls[0] == call.get('user', 'unknown_user')
     else:
         mock_decode_token.assert_called_once()

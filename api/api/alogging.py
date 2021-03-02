@@ -16,6 +16,7 @@ request_pattern = re.compile(r'\[.+\]|\s+\*\s+')
 # Variable used to specify an unknown user
 UNKNOWN_USER_STRING = "unknown_user"
 
+
 class AccessLogger(AbstractAccessLogger):
 
     def log(self, request, response, time):
