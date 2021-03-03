@@ -277,7 +277,7 @@ int add_audit_rules_syscheck(bool first_time) {
 }
 
 
-void audit_immutable_init() {
+void audit_create_rules_file() {
     int i;
     FILE *fp;
 
@@ -291,10 +291,10 @@ void audit_immutable_init() {
         if ((syscheck.opts[i] & WHODATA_ACTIVE) == 0) {
             continue;
         }
-        mdebug2(FIM_ADDED_RULE_TO_FILE, fim_get_real_path(i));
-        fprintf(fp, "-w %s -p wa -k %s\n", fim_get_real_path(i), AUDIT_KEY);
+        const char *path = fim_get_real_path(i);
 
-        audit_no_rules_to_realtime(i);
+        mdebug2(FIM_ADDED_RULE_TO_FILE, path);
+        fprintf(fp, "-w %s -p wa -k %s\n", path, AUDIT_KEY);
     }
 
     if (fclose(fp)) {
@@ -321,18 +321,30 @@ void audit_immutable_init() {
             return;
         }
     }
+
+    mdebug2(FIM_AUDIT_CREATED_RULE_FILE);
 }
 
 
-void audit_no_rules_to_realtime(int pos) {
-    int found;
+void audit_rules_to_realtime() {
+    for (int i = 0; syscheck.dir[i] != NULL; i++) {
+        if ((syscheck.opts[i] & WHODATA_ACTIVE) == 0) {
+            continue;
+        }
 
-    found = search_audit_rule(fim_get_real_path(pos), "wa", AUDIT_KEY);
+        const char *path = fim_get_real_path(i);
+        if (search_audit_rule(path, "wa", AUDIT_KEY) == 1) {
+            return;
+        }
 
-    if (found == 0) {   // No rule found
-        mwarn(FIM_ERROR_WHODATA_ADD_DIRECTORY, fim_get_real_path(pos));
-        syscheck.opts[pos] &= ~WHODATA_ACTIVE;
-        syscheck.opts[pos] |= REALTIME_ACTIVE;
+        for (int j = 0; syscheck.audit_key[j]; j++) {
+            if (search_audit_rule(path, "wa", syscheck.audit_key[j]) == 1) {
+                return;
+            }
+        }
+        mwarn(FIM_ERROR_WHODATA_ADD_DIRECTORY, path);
+        syscheck.opts[i] &= ~WHODATA_ACTIVE;
+        syscheck.opts[i] |= REALTIME_ACTIVE;
     }
 }
 
@@ -551,7 +563,8 @@ int audit_init(void) {
 
     switch (au_mode) {
     case AUDIT_IMMUTABLE:
-        audit_immutable_init();
+        audit_create_rules_file();
+        audit_rules_to_realtime();
         break;
     case AUDIT_ERROR:
         merror(FIM_ERROR_AUDIT_MODE, strerror(errno), errno);
